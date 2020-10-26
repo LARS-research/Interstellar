@@ -1,0 +1,5 @@
+numpy
+pandas
+scipy
+pytorch=1.4.0
+
