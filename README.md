@@ -1,5 +1,4 @@
 # Interstellar
-Interstellar: Searching Recurrent Architecture for Knowledge Graph Embedding. NeurIPS 2020.
 The code for our paper ["Interstellar: Searching Recurrent Architecture for Knowledge Graph Embedding"](https://arxiv.org/abs/1911.07132) in NeurIPS 2020.
 
 ## Instructions
