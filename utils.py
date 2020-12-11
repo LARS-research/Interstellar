@@ -18,6 +18,10 @@ def plot_config(args):
     with open(args.perf_file, 'a') as f:
         f.write(out_str) 
 
+def parse_struct(struct):
+    struct = struct.split('[')[-1].split(']')[0].split(',')
+    struct = [int(s.strip()) for s in struct]
+    return struct
 
 def inplace_shuffle(*lists):
     idx = []
@@ -73,13 +77,11 @@ def cal_ranks(probs, method, label):
         ranks = ranks.values[range(len(label)), label]
     return ranks
 
-def cal_performance(ranks, top=10):
+def cal_performance(ranks):
     mrr = (1. / ranks).sum() / len(ranks)
-    m_r = sum(ranks) * 1.0 / len(ranks)
     h_1 = sum(ranks<=1) * 1.0 / len(ranks)
-    h_3 = sum(ranks<=3) * 1.0 / len(ranks)
     h_10 = sum(ranks<=10) * 1.0 / len(ranks)
-    return mrr, m_r, h_1, h_3, h_10
+    return mrr, h_1, h_10
 
 def padding_EAdata(data, batch_size):
     padding_num = batch_size - len(data) % batch_size
