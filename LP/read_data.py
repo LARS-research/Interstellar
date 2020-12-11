@@ -155,13 +155,13 @@ class LPReader(Reader):
 
     def read_data(self):
         path = self._options.data_path
-        tr = pd.read_csv(path + 'train.txt', header=None, sep='\t', names=['h', 't', 'r'])
-        te = pd.read_csv(path + 'test.txt', header=None, sep='\t', names=['h', 't', 'r'])
-        val = pd.read_csv(path + 'valid.txt', header=None, sep='\t', names=['h', 't', 'r'])
+        tr = pd.read_csv(os.path.join(path, 'train.txt'), header=None, sep='\t', names=['h', 't', 'r'])
+        te = pd.read_csv(os.path.join(path, 'test.txt'), header=None, sep='\t', names=['h', 't', 'r'])
+        val = pd.read_csv(os.path.join(path, 'valid.txt'), header=None, sep='\t', names=['h', 't', 'r'])
 
-        e_id = pd.read_csv(path + 'entity2id.txt', header=None, sep='\t', names=['e', 'eid'])
+        e_id = pd.read_csv(os.path.join(path,'entity2id.txt'), header=None, sep='\t', names=['e', 'eid'])
         e_id = pd.Series(e_id.eid.values, index=e_id.e.values)
-        r_id = pd.read_csv(path + 'relation2id.txt', header=None, sep='\t', names=['r', 'rid'])
+        r_id = pd.read_csv(os.path.join(path,'relation2id.txt'), header=None, sep='\t', names=['r', 'rid'])
         r_id = pd.Series(r_id.rid.values, index=r_id.r.values)
         
         

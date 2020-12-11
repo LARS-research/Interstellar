@@ -7,7 +7,7 @@ import utils
 from asng import CategoricalASNG
 from torch.optim.lr_scheduler import ExponentialLR
 
-from EA.model_search import SRAPModule
+from EA.model_search import Interstellar
 
 def write_row(filename, data, reset=False):
     with open(filename, 'w' if reset else 'a') as o:
@@ -20,6 +20,7 @@ def write_row(filename, data, reset=False):
 class BaseModule(object):
     def __init__(self, reader, options, structs):
         self.opts = options
+        self.reader = reader
 
         self.models = []
         self.structs = [list(struct) for struct in structs]
@@ -27,12 +28,13 @@ class BaseModule(object):
         C_in = [3,3, 2,2,2,2,2,2]
         self.asng_in = CategoricalASNG(np.array(C_in), alpha=1.5, delta_init=1)
 
-    def train(self, train_data, tester_val, tester_tst, MAX_EPOCH=10):
+    def train(self, train_data, valid_data, MAX_EPOCH=10, kb_1to2=False):
         hit1s = []
+        structs = []
         MAX_TIME = 2
         for l1 in range(self.opts.lam):
             # micro-level update
-            model = SRAPModule(self.opts).cuda()
+            model = Interstellar(self.opts).cuda()
             optimizer = Adam(model.parameters(), lr=self.opts.learning_rate, weight_decay=self.opts.L2)
             scheduler = ExponentialLR(optimizer, self.opts.decay_rate)
             best_hit1 = 0
@@ -90,7 +92,7 @@ class BaseModule(object):
             best_struct = list(self.asng_in.theta.argmax(axis=1))
             struct = self.structs[l1] + best_struct
 
-            model = SRAPModule(self.opts).cuda()
+            model = Interstellar(self.opts).cuda()
             optimizer = Adam(model.parameters(), lr=self.opts.learning_rate, weight_decay=self.opts.L2)
             scheduler = ExponentialLR(optimizer, self.opts.decay_rate)
 
@@ -98,10 +100,10 @@ class BaseModule(object):
             early_stop = 0
             for epoch in range(MAX_EPOCH):
                 if (epoch+1) % self.opts.epoch_per_test == 0:
-                    mrr, mr, h1, h3, h10 = tester_val(model)
+                    mrr, h1, h10 = self.test_align(self.reader, valid_data, model, kb_1to2=kb_1to2)
                     if h1 > best_hit1:
                         best_hit1 = h1
-                        best_str = str(struct) + '\t %d  %.4f %.1f %.4f %.4f %.4f\n' % (epoch+1, mrr, mr, h1, h3, h10)
+                        best_str = str(struct) + '\t %d  %.3f  %.3f  %.3f\n' % (epoch+1, mrr, h1, h10)
                         early_stop = 0
                     else:
                         early_stop += 1
@@ -125,7 +127,8 @@ class BaseModule(object):
             with open(self.opts.out_filename, 'a') as f:
                 f.write(best_str)
             hit1s.append(best_hit1)
-        return hit1s
+            structs.append(struct)
+        return hit1s, structs
 
     def save(self, filename='SHARED_PARAMS.pt'):
         torch.save(self.model.state_dict(), self.opts.modelname)
@@ -151,9 +154,7 @@ class BaseModule(object):
             else:
                 e = torch.LongTensor(one_batch_data.kb_2.values).cuda()
     
-            s_embed = s_em(e)
-
-            h_embed = s_embed
+            h_embed = s_em(e)
             norm_embed = s_em.weight
             h_embed = h_embed / torch.norm(h_embed, dim=-1, keepdim=True)
             norm_embed = norm_embed/ torch.norm(norm_embed, dim=-1, keepdim=True)
@@ -166,8 +167,8 @@ class BaseModule(object):
         mask = np.in1d(np.arange(probs.shape[1]), candi)
         probs[:, ~mask] = probs.min() - 1
         ranks = utils.cal_ranks(probs, method=method, label=label)
-        f_mrr, f_mr, f_h1, f_h3, f_h10 = utils.cal_performance(ranks)
-        return f_mrr, f_mr, f_h1, f_h3, f_h10
+        f_mrr, f_h1, f_h10 = utils.cal_performance(ranks)
+        return f_mrr, f_h1, f_h10
 
        
 

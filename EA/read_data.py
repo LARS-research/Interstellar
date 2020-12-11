@@ -14,28 +14,28 @@ class Reader(object):
         def read_kb(path, names):
             return pd.read_csv(path, sep='\t', header=None, names=names)
 
-        kb1 = read_kb(data_path+'triples_1', names=['h_id', 'r_id', 't_id'])
-        kb2 = read_kb(data_path+'triples_2', names=['h_id', 'r_id', 't_id'])
+        kb1 = read_kb(os.path.join(data_path, 'triples_1'), names=['h_id', 'r_id', 't_id'])
+        kb2 = read_kb(os.path.join(data_path, 'triples_2'), names=['h_id', 'r_id', 't_id'])
 
-        ent_mapping = read_kb(data_path+'sup_ent_ids', names=['kb_1', 'kb_2'])
-        ent_testing = read_kb(data_path+'ref_ent_ids', names=['kb_1', 'kb_2'])
+        ent_mapping = read_kb(os.path.join(data_path, 'sup_ent_ids'), names=['kb_1', 'kb_2'])
+        ent_testing = read_kb(os.path.join(data_path, 'ref_ent_ids'), names=['kb_1', 'kb_2'])
 
-        if not os.path.exists(data_path+'sup_rel_ids'):
-            os.mknod(data_path+'sup_rel_ids')
-        if not os.path.exists(data_path+'rel_rel_ids'):
-            os.mknod(data_path+'rel_rel_ids')
+        if not os.path.exists(os.path.join(data_path, 'sup_rel_ids')):
+            os.mknod(os.path.join(data_path, 'sup_rel_ids'))
+        if not os.path.exists(os.path.join(data_path, 'rel_rel_ids')):
+            os.mknod(os.path.join(data_path, 'rel_rel_ids'))
 
-        rel_mapping = read_kb(data_path+'sup_rel_ids', names=['kb_1', 'kb_2'])
-        rel_testing = read_kb(data_path+'rel_rel_ids', names=['kb_1', 'kb_2'])
+        rel_mapping = read_kb(os.path.join(data_path, 'sup_rel_ids'), names=['kb_1', 'kb_2'])
+        rel_testing = read_kb(os.path.join(data_path, 'rel_rel_ids'), names=['kb_1', 'kb_2'])
 
-        ent_id_1 = read_kb(data_path+'ent_ids_1', names=['id', 'e'])
-        ent_id_2 = read_kb(data_path+'ent_ids_2', names=['id', 'e'])
+        ent_id_1 = read_kb(os.path.join(data_path, 'ent_ids_1'), names=['id', 'e'])
+        ent_id_2 = read_kb(os.path.join(data_path, 'ent_ids_2'), names=['id', 'e'])
         ent_id_2.loc[:, 'e'] += ':KB2'
         i2el_1 = pd.Series(ent_id_1.e.values, index=ent_id_1.id.values)
         i2el_2 = pd.Series(ent_id_2.e.values, index=ent_id_2.id.values)
 
-        rel_id_1 = read_kb(data_path+'rel_ids_1', names=['id', 'r'])
-        rel_id_2 = read_kb(data_path+'rel_ids_2', names=['id', 'r'])
+        rel_id_1 = read_kb(os.path.join(data_path, 'rel_ids_1'), names=['id', 'r'])
+        rel_id_2 = read_kb(os.path.join(data_path, 'rel_ids_2'), names=['id', 'r'])
         rel_id_2.loc[:, 'r'] += ':KB2'
         i2rl_1 = pd.Series(rel_id_1.r.values, index=rel_id_1.id.values)
         i2rl_2 = pd.Series(rel_id_2.r.values, index=rel_id_2.id.values)
@@ -302,5 +302,5 @@ class Sampler(object):
         data = pd.DataFrame(data)
         
         self._train_data = data
-        data.to_csv('%spaths_%.1f_%.1f' % (opts.data_path, opts.alpha, opts.beta))
+        data.to_csv(os.path.join(opts.data_path, 'paths_%.1f_%.1f' % (opts.alpha, opts.beta)))
 

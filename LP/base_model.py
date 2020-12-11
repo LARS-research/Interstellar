@@ -7,15 +7,7 @@ import utils
 from asng import CategoricalASNG
 from torch.optim.lr_scheduler import ExponentialLR
 
-from LP.model_search import SRAPModule
-
-def write_row(filename, data, reset=False):
-    with open(filename, 'w' if reset else 'a') as o:
-        row = ''
-        for i,c in enumerate(data):
-            row += ('' if i==0 else ',') + str(c)
-        row += '\n'
-        o.write(row)
+from LP.model_search import Interstellar
 
 class BaseModule(object):
     def __init__(self, reader, options, structs):
@@ -29,10 +21,11 @@ class BaseModule(object):
 
     def train(self, train_data, valid_data, vfilter_mat, MAX_EPOCH=10):
         hit1s = []
+        structs = []
         MAX_TIME = 3
         for l1 in range(self.opts.lam):
             # micro-level update
-            model = SRAPModule(self.opts).cuda()
+            model = Interstellar(self.opts).cuda()
             optimizer = Adam(model.parameters(), lr=self.opts.learning_rate, weight_decay=self.opts.L2)
             scheduler = ExponentialLR(optimizer, self.opts.decay_rate)
             best_hit1 = 0
@@ -45,6 +38,7 @@ class BaseModule(object):
             for epoch in range(6):
                 # shuffle training set
                 choices = np.random.choice(n_train, size=n_train, replace=False)
+                model.train()
 
                 for i in range(n_batch):
                     start = i*batch_size
@@ -92,7 +86,7 @@ class BaseModule(object):
             best_struct = list(self.asng_in.theta.argmax(axis=1))
             struct = self.structs[l1] + best_struct
 
-            model = SRAPModule(self.opts).cuda()
+            model = Interstellar(self.opts).cuda()
             optimizer = Adam(model.parameters(), lr=self.opts.learning_rate, weight_decay=self.opts.L2)
             scheduler = ExponentialLR(optimizer, self.opts.decay_rate)
 
@@ -101,10 +95,10 @@ class BaseModule(object):
             early_stop = 0
             for epoch in range(MAX_EPOCH):
                 if (epoch+1) % self.opts.epoch_per_test  == 0:
-                    mrr, mr, h1, h3, h10 = self.test_link(valid_data, vfilter_mat, model, struct)
+                    mrr, h1, h10 = self.test_link(valid_data, vfilter_mat, model, struct)
                     if h1 > best_hit1:
                         best_hit1= h1
-                        best_str = str(struct) + '\t %d  %.4f %.1f %.4f %.4f %.4f\n' % (epoch+1, mrr, mr, h1, h3, h10)
+                        best_str = str(struct) + '\tepoch:%d  mrr:%.4f  h1:%.4f  h10:%.4f\n' % (epoch+1, mrr, h1, h10)
                         early_stop = 0
                     else:
                         early_stop += 1
@@ -112,9 +106,9 @@ class BaseModule(object):
                     if early_stop > MAX_TIME:
                         break
 
+                model.train()
                 choices = np.random.choice(n_train, size=n_train, replace=True)
                 for i in range(n_batch):
-                    model.train()
                     start = i*batch_size
                     end = min(n_train, (i+1)*batch_size)
                     one_batch_choices = choices[start:end]
@@ -130,7 +124,9 @@ class BaseModule(object):
             with open(self.opts.out_filename, 'a') as f:
                 f.write(best_str)
             hit1s.append(best_hit1)
-        return hit1s
+            structs.append(struct)
+        return hit1s, structs
+
     def save(self, filename='SHARED_PARAMS.pt'):
         torch.save(self.model.state_dict(), self.opts.modelname)
 
@@ -156,6 +152,7 @@ class BaseModule(object):
         num_batch = len(data) // batch_size
 
         probs = []
+        model.eval()
         for i in range(num_batch):
             seqs = torch.LongTensor(data[i*batch_size:(i+1)*batch_size]).cuda()
             probs.append(model.evaluate(seqs, struct).data.cpu().numpy())
@@ -166,6 +163,6 @@ class BaseModule(object):
         filter_probs = probs * filter_mat
         filter_probs[range(len(label)), label] = probs[range(len(label)), label]
         filter_ranks = utils.cal_ranks(filter_probs, method=method, label=label)
-        f_mrr, f_mr, f_h1, f_h3, f_h10= utils.cal_performance(filter_ranks)
-        return f_mrr, f_mr, f_h1, f_h3, f_h10
+        f_mrr, f_h1, f_h10= utils.cal_performance(filter_ranks)
+        return f_mrr, f_h1, f_h10
 

@@ -2,14 +2,13 @@ import torch
 import torch.nn as nn
 
 
-class SRAPModule(nn.Module):
+class Interstellar(nn.Module):
     """
     this class partially refers to https://github.com/nju-websoft/RSN
     """
     def __init__(self, options):
-        super(SRAPModule, self).__init__()
+        super(Interstellar, self).__init__()
         self._options = options
-        self.lam = options.lam
         hidden_size = self.hidden_size = options.hidden_size
 
         self.sub_embed = nn.Embedding(options._ent_num, hidden_size)

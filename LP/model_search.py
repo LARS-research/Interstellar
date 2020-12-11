@@ -3,24 +3,20 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class SRAPModule(nn.Module):
+class Interstellar(nn.Module):
     """
     this class partially refers to https://github.com/nju-websoft/RSN
     """
     def __init__(self, options):
-        super(SRAPModule, self).__init__()
+        super(Interstellar, self).__init__()
         self._options = options
-        self.lam = options.lam
         hidden_size = self.hidden_size = options.hidden_size
 
         self.sub_embed = nn.Embedding(options._ent_num, hidden_size)
         self.rel_embed = nn.Embedding(options._rel_num, hidden_size)
         self.obj_embed = nn.Embedding(options._ent_num, hidden_size)
 
-        self.bn1 = nn.BatchNorm1d(hidden_size)
-        self.bn2 = nn.BatchNorm1d(hidden_size)
-        self.bn3 = nn.BatchNorm1d(hidden_size)
-
+        self.drop = nn.Dropout(options.drop)
         self.gate = nn.Linear(2*hidden_size, hidden_size)
 
         self.W1 = nn.Linear(hidden_size, hidden_size, bias=False)
@@ -105,8 +101,8 @@ class SRAPModule(nn.Module):
             outputs_f.append(out_f)
             outputs_b.append(out_b)
 
-        outputs_f = torch.cat(outputs_f, dim=0)
-        outputs_b = torch.cat(outputs_b, dim=0)
+        outputs_f = self.drop(torch.cat(outputs_f, dim=0))
+        outputs_b = self.drop(torch.cat(outputs_b, dim=0))
 
         target_f = obj_emb_f.permute(1,0,2).contiguous().view(-1, self.hidden_size)
         target_b = obj_emb_b.permute(1,0,2).contiguous().view(-1, self.hidden_size)
